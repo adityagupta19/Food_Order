@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import path from "path";
 
 import { AdminRoute, ShoppingRoute, VandorRoute } from "./routes";
+import { CustomerRoute } from "./routes/CustomerRoute";
 
 const app = express();
 
@@ -13,7 +14,7 @@ app.use("/images", express.static(path.join(__dirname, "images")));
 
 app.use("/admin", AdminRoute);
 app.use("/vandor", VandorRoute);
-app.use("user",);
+app.use("user",CustomerRoute);
 app.use("/shop",ShoppingRoute);
 
 mongoose
