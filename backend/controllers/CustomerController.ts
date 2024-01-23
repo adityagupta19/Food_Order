@@ -1,7 +1,7 @@
 import express,{Request,Response,NextFunction} from 'express';
 import {plainToInstance} from 'class-transformer';
 import {Validate, validate} from 'class-validator';
-import { CreateCustomerInputs, UserLoginInput } from '../dto/Customer.dto';
+import { CreateCustomerInputs, EditCustomerProfileInput, UserLoginInput } from '../dto/Customer.dto';
 import { Customer } from '../models/Customer';
 import { GeneratePassword, GenerateSalt, GenerateOtp, GenerateSignature, onRequestOTP, ValidatePassword } from '../utility'
 
@@ -152,8 +152,49 @@ export const RequestOtp = async (req: Request, res: Response, next: NextFunction
 
 export const GetCustomerProfile = async (req: Request, res: Response, next: NextFunction) =>{
     
+    const customer = req.user;
+ 
+    if(customer){
+        
+        const profile =  await Customer.findById(customer._id);
+        
+        if(profile){             
+            return res.status(201).json(profile);
+        }
+
+    }
+    return res.status(400).json({ msg: 'Error while Fetching Profile'});
+
 }
 
 export const EditCustomerProfile = async (req: Request, res: Response, next: NextFunction) =>{
     
+    const customer = req.user;
+
+    const customerInputs = plainToInstance(EditCustomerProfileInput, req.body);
+
+    const validationError = await validate(customerInputs, {validationError: { target: true}})
+
+    if(validationError.length > 0){
+        return res.status(400).json(validationError);
+    }
+
+    const { firstName, lastName, address } = customerInputs;
+
+    if(customer){
+        
+        const profile =  await Customer.findById(customer._id);
+        
+        if(profile){
+            profile.firstName = firstName;
+            profile.lastName = lastName;
+            profile.address = address;
+            const result = await profile.save()
+            
+            return res.status(201).json(result);
+        }
+
+    }
+    return res.status(400).json({ msg: 'Error while Updating Profile'});
+
 }
