@@ -1,9 +1,9 @@
 import express,{Request,Response,NextFunction} from 'express';
 import {plainToInstance} from 'class-transformer';
-import {validate} from 'class-validator';
-import { CreateCustomerInputs } from '../dto/Customer.dto';
+import {Validate, validate} from 'class-validator';
+import { CreateCustomerInputs, UserLoginInput } from '../dto/Customer.dto';
 import { Customer } from '../models/Customer';
-import { GeneratePassword, GenerateSalt, GenerateOtp, GenerateSignature, onRequestOTP } from '../utility'
+import { GeneratePassword, GenerateSalt, GenerateOtp, GenerateSignature, onRequestOTP, ValidatePassword } from '../utility'
 
 export const CustomerSignup = async (req: Request, res: Response, next: NextFunction) =>{
     const customerInputs = plainToInstance(CreateCustomerInputs,req.body);
@@ -64,7 +64,35 @@ export const CustomerSignup = async (req: Request, res: Response, next: NextFunc
 
 
 export const CustomerLogin = async (req: Request, res: Response, next: NextFunction) =>{
-    
+
+    const loginInputs = plainToInstance(UserLoginInput,req.body);
+    const loginErrors = await validate(loginInputs, {validationError:{target: false}});
+
+    if(loginErrors.length >0){
+        return res.status(400).json(loginErrors);
+    }
+
+    const {email,password} = loginInputs;
+
+    const customer = await Customer.findOne({email:email});
+
+    if(customer){
+        const validation = await ValidatePassword(password,customer.password,customer.salt)
+
+        if(validation){
+
+            const signature = GenerateSignature({
+                _id: customer._id,
+                email:customer.email,
+                verified: customer.verified
+            })
+
+            res.status(201).json({signature:signature,verified:customer.verified,email:customer.email});
+        }
+    }
+
+    res.status(404).json({message: 'Login Error'});
+
 }
 
 
